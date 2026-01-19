@@ -29,7 +29,7 @@ export default function RootLayout({
           <header className="glass border-b border-white/10 sticky top-0 z-50">
             <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
+                <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
                   <svg
                     className="w-6 h-6 text-white"
                     fill="none"
@@ -43,12 +43,13 @@ export default function RootLayout({
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                     />
                   </svg>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">Video Downloader</h1>
-                  <p className="text-xs text-gray-400">by <a href="https://github.com/athanasso" target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:underline">athanasso</a></p>
-                </div>
+                </span>
+                <span>
+                  <span className="text-xl font-bold text-white block">Video Downloader</span>
+                  <span className="text-xs text-gray-400 block">by <span className="text-primary-400">athanasso</span></span>
+                </span>
               </Link>
+              <a href="https://github.com/athanasso" target="_blank" rel="noopener noreferrer" className="hidden">athanasso</a>
               <nav className="hidden md:flex items-center gap-6">
                 <Link href="/how-it-works" className="text-gray-300 hover:text-white transition-colors text-sm">
                   How it works
