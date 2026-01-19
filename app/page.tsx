@@ -7,6 +7,7 @@ import FormatSelector from "./components/FormatSelector";
 import QualitySelector from "./components/QualitySelector";
 import DownloadButton from "./components/DownloadButton";
 import ToastContainer from "./components/Toast";
+import AdBanner from "./components/AdBanner";
 import { useToast } from "./hooks/useToast";
 import type { VideoInfo, FormatType, ApiResponse } from "./types/video";
 import { Sparkles, Shield, Zap, Globe } from "lucide-react";
@@ -154,6 +155,11 @@ export default function Home() {
           />
         </div>
 
+        {/* Ad Banner - Below Input */}
+        <div className="mb-8">
+                              <AdBanner adSlot={process.env.NEXT_PUBLIC_AD_SLOT_1 || ""} adFormat="auto" className="rounded-xl overflow-hidden" />
+        </div>
+
         {/* Video Info & Settings */}
         {videoInfo && (
           <div className="grid md:grid-cols-2 gap-6 mb-8 animate-slide-up">
@@ -235,6 +241,11 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Ad Banner - Bottom */}
+        <div className="mt-12">
+                              <AdBanner adSlot={process.env.NEXT_PUBLIC_AD_SLOT_2 || ""} adFormat="auto" className="rounded-xl overflow-hidden" />
+        </div>
       </div>
     </>
   );
