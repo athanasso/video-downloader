@@ -32,6 +32,9 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   
+  // Docker optimization
+  output: "standalone",
+  
   // Performance optimizations
   poweredByHeader: false, // Remove X-Powered-By header for security
   compress: true, // Enable gzip compression
