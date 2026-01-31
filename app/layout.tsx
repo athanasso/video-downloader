@@ -90,7 +90,7 @@ export default function RootLayout({
       <head>
         <AdSenseScript />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <div className="min-h-screen flex flex-col">
           {/* Header */}
           <header className="glass border-b border-white/10 sticky top-0 z-50">
