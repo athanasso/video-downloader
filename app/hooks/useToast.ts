@@ -2,13 +2,18 @@
 
 import { useState, useCallback } from "react";
 import type { ToastMessage } from "@/app/types/video";
+import { generateId } from "@/app/lib/utils";
 
+/**
+ * Custom hook for managing toast notifications
+ * @returns Toast management functions and current toasts array
+ */
 export function useToast() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = useCallback(
     (type: ToastMessage["type"], message: string, duration?: number) => {
-      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId();
       const newToast: ToastMessage = { id, type, message, duration };
       setToasts((prev) => [...prev, newToast]);
       return id;
@@ -50,3 +55,4 @@ export function useToast() {
     warning,
   };
 }
+

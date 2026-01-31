@@ -1,7 +1,9 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import type { QualityOption } from "@/app/types/video";
+import { formatFileSize } from "@/app/lib/utils";
 
 interface QualitySelectorProps {
   options: QualityOption[];
@@ -11,25 +13,23 @@ interface QualitySelectorProps {
   formatType: "video" | "audio";
 }
 
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return "";
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  return `~${size.toFixed(0)} ${units[unitIndex]}`;
-}
-
-export default function QualitySelector({
+/**
+ * Quality selector component with memoization for better performance
+ */
+const QualitySelector = memo(function QualitySelector({
   options,
   selected,
   onChange,
   disabled,
   formatType,
 }: QualitySelectorProps) {
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      onChange(e.target.value);
+    },
+    [onChange]
+  );
+
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -38,7 +38,7 @@ export default function QualitySelector({
       <div className="relative">
         <select
           value={selected}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           disabled={disabled || options.length === 0}
           className={`
             w-full appearance-none
@@ -76,4 +76,6 @@ export default function QualitySelector({
       </p>
     </div>
   );
-}
+});
+
+export default QualitySelector;

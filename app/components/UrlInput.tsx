@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Search, Loader2, Link as LinkIcon } from "lucide-react";
 
 interface UrlInputProps {
@@ -9,37 +9,47 @@ interface UrlInputProps {
   disabled?: boolean;
 }
 
-export default function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProps) {
+/**
+ * URL input component with validation and paste functionality
+ * Memoized for better performance
+ */
+const UrlInput = memo(function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProps) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
 
-  const validateUrl = (input: string): boolean => {
+  const validateUrl = useCallback((input: string): boolean => {
     try {
       new URL(input);
       return true;
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!url.trim()) {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
       setError("Please enter a URL");
       return;
     }
 
-    if (!validateUrl(url.trim())) {
+    if (!validateUrl(trimmedUrl)) {
       setError("Please enter a valid URL");
       return;
     }
 
-    onSubmit(url.trim());
-  };
+    onSubmit(trimmedUrl);
+  }, [url, validateUrl, onSubmit]);
 
-  const handlePaste = async () => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+    setError("");
+  }, []);
+
+  const handlePaste = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text && validateUrl(text)) {
@@ -47,9 +57,12 @@ export default function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProp
         setError("");
       }
     } catch {
-      // Clipboard access denied
+      // Clipboard access denied - silently fail
     }
-  };
+  }, [validateUrl]);
+
+  const isDisabled = disabled || isLoading;
+  const canSubmit = !isDisabled && url.trim().length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
@@ -60,10 +73,7 @@ export default function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProp
         <input
           type="text"
           value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setError("");
-          }}
+          onChange={handleChange}
           placeholder="Paste video URL here (YouTube, Vimeo, etc.)"
           className={`
             w-full pl-12 pr-36 py-4 
@@ -73,20 +83,24 @@ export default function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProp
             transition-all duration-300
             ${error ? "border-red-500/50" : "border-white/10"}
           `}
-          disabled={disabled || isLoading}
+          disabled={isDisabled}
+          aria-label="Video URL input"
+          aria-invalid={!!error}
+          aria-describedby={error ? "url-error" : undefined}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
           <button
             type="button"
             onClick={handlePaste}
             className="px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-            disabled={disabled || isLoading}
+            disabled={isDisabled}
+            aria-label="Paste from clipboard"
           >
             Paste
           </button>
           <button
             type="submit"
-            disabled={disabled || isLoading || !url.trim()}
+            disabled={!canSubmit}
             className="
               btn-gradient px-6 py-2 rounded-lg
               text-white font-medium text-sm
@@ -109,8 +123,13 @@ export default function UrlInput({ onSubmit, isLoading, disabled }: UrlInputProp
         </div>
       </div>
       {error && (
-        <p className="mt-2 text-sm text-red-400 animate-fade-in">{error}</p>
+        <p id="url-error" className="mt-2 text-sm text-red-400 animate-fade-in" role="alert">
+          {error}
+        </p>
       )}
     </form>
   );
-}
+});
+
+export default UrlInput;
+

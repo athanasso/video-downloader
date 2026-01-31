@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import type { ToastMessage } from "@/app/types/video";
 
@@ -14,23 +14,27 @@ const iconMap = {
   error: AlertCircle,
   info: Info,
   warning: AlertTriangle,
-};
+} as const;
 
 const colorMap = {
   success: "from-green-500/20 to-green-600/20 border-green-500/30",
   error: "from-red-500/20 to-red-600/20 border-red-500/30",
   info: "from-blue-500/20 to-blue-600/20 border-blue-500/30",
   warning: "from-yellow-500/20 to-yellow-600/20 border-yellow-500/30",
-};
+} as const;
 
 const iconColorMap = {
   success: "text-green-400",
   error: "text-red-400",
   info: "text-blue-400",
   warning: "text-yellow-400",
-};
+} as const;
 
-function Toast({ toast, onDismiss }: ToastProps) {
+/**
+ * Individual toast notification component
+ * Memoized for performance
+ */
+const Toast = memo(function Toast({ toast, onDismiss }: ToastProps) {
   const [isExiting, setIsExiting] = useState(false);
   const Icon = iconMap[toast.type];
 
@@ -44,10 +48,10 @@ function Toast({ toast, onDismiss }: ToastProps) {
     return () => clearTimeout(timer);
   }, [toast.id, toast.duration, onDismiss]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     setIsExiting(true);
     setTimeout(() => onDismiss(toast.id), 300);
-  };
+  }, [toast.id, onDismiss]);
 
   return (
     <div
@@ -64,24 +68,31 @@ function Toast({ toast, onDismiss }: ToastProps) {
       <button
         onClick={handleDismiss}
         className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+        aria-label="Dismiss notification"
       >
         <X className="w-4 h-4" />
       </button>
     </div>
   );
-}
+});
 
 interface ToastContainerProps {
   toasts: ToastMessage[];
   onDismiss: (id: string) => void;
 }
 
-export default function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
+/**
+ * Container component for toast notifications
+ */
+const ToastContainer = memo(function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3">
+    <div className="fixed top-4 right-4 z-50 space-y-3" role="region" aria-label="Notifications">
       {toasts.map((toast) => (
         <Toast key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
     </div>
   );
-}
+});
+
+export default ToastContainer;
+

@@ -2,10 +2,13 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    // Only include directories that actually exist
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  // Enable future-proof features
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       colors: {
@@ -67,3 +70,4 @@ const config: Config = {
 };
 
 export default config;
+

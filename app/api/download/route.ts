@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
-import { Readable } from "stream";
+import { sanitizeFilename } from "@/app/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// Helper to sanitize filename
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[<>:"/\\|?*]/g, "_")
-    .replace(/\s+/g, "_")
-    .substring(0, 200);
-}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

@@ -1,16 +1,83 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import AdSenseScript from "./components/AdSenseScript";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+// Optimize font loading with display swap
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+});
 
+// SEO Metadata
 export const metadata: Metadata = {
-  title: "Video Downloader | Download Videos & Audio",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://video-downloader.athanasso.dev"),
+  title: {
+    default: "Video Downloader | Download Videos & Audio from YouTube & More",
+    template: "%s | Video Downloader",
+  },
   description:
-    "Download videos and audio from YouTube and other platforms. Choose your preferred quality and format.",
-  keywords: ["video downloader", "youtube downloader", "mp3", "mp4", "audio extractor"],
+    "Free online video downloader. Download videos and audio from YouTube, Vimeo, Twitter, Reddit and 1000+ sites. Choose your preferred quality and format. No registration required.",
+  keywords: [
+    "video downloader",
+    "youtube downloader",
+    "mp3 converter",
+    "mp4 download",
+    "audio extractor",
+    "free video download",
+    "online video downloader",
+    "4k video downloader",
+    "vimeo downloader",
+    "twitter video download",
+  ],
+  authors: [{ name: "athanasso", url: "https://github.com/athanasso" }],
+  creator: "athanasso",
+  publisher: "athanasso",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    title: "Video Downloader | Download Videos & Audio Free",
+    description: "Download videos from YouTube, Vimeo, Twitter and 1000+ sites. Free, fast, and no registration required.",
+    siteName: "Video Downloader",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Video Downloader | Download Videos & Audio Free",
+    description: "Download videos from YouTube, Vimeo, Twitter and 1000+ sites. Free, fast, and no registration required.",
+    creator: "@athanasso",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
+  alternates: {
+    canonical: "/",
+  },
+};
+
+// Viewport configuration
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

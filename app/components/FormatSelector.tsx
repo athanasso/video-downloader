@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { Video, Music } from "lucide-react";
 import type { FormatType } from "@/app/types/video";
 
@@ -9,7 +10,17 @@ interface FormatSelectorProps {
   disabled?: boolean;
 }
 
-export default function FormatSelector({ selected, onChange, disabled }: FormatSelectorProps) {
+/**
+ * Format selector component (video/audio) with memoization
+ */
+const FormatSelector = memo(function FormatSelector({ 
+  selected, 
+  onChange, 
+  disabled 
+}: FormatSelectorProps) {
+  const handleVideoClick = useCallback(() => onChange("video"), [onChange]);
+  const handleAudioClick = useCallback(() => onChange("audio"), [onChange]);
+
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -18,7 +29,7 @@ export default function FormatSelector({ selected, onChange, disabled }: FormatS
       <div className="glass rounded-xl p-1 flex">
         <button
           type="button"
-          onClick={() => onChange("video")}
+          onClick={handleVideoClick}
           disabled={disabled}
           className={`
             flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
@@ -36,7 +47,7 @@ export default function FormatSelector({ selected, onChange, disabled }: FormatS
         </button>
         <button
           type="button"
-          onClick={() => onChange("audio")}
+          onClick={handleAudioClick}
           disabled={disabled}
           className={`
             flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
@@ -55,4 +66,6 @@ export default function FormatSelector({ selected, onChange, disabled }: FormatS
       </div>
     </div>
   );
-}
+});
+
+export default FormatSelector;

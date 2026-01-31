@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Download, Loader2, Check } from "lucide-react";
 
 interface DownloadButtonProps {
@@ -10,7 +11,11 @@ interface DownloadButtonProps {
   format: "video" | "audio";
 }
 
-export default function DownloadButton({
+/**
+ * Download button component with loading and completion states
+ * Memoized to prevent unnecessary re-renders
+ */
+const DownloadButton = memo(function DownloadButton({
   onClick,
   isLoading,
   isComplete,
@@ -54,4 +59,7 @@ export default function DownloadButton({
       )}
     </button>
   );
-}
+});
+
+export default DownloadButton;
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import UrlInput from "./components/UrlInput";
 import VideoCard from "./components/VideoCard";
 import FormatSelector from "./components/FormatSelector";
@@ -8,9 +8,14 @@ import QualitySelector from "./components/QualitySelector";
 import DownloadButton from "./components/DownloadButton";
 import ToastContainer from "./components/Toast";
 import AdBanner from "./components/AdBanner";
+import FeatureCard from "./components/FeatureCard";
 import { useToast } from "./hooks/useToast";
 import type { VideoInfo, FormatType, ApiResponse } from "./types/video";
 import { Sparkles, Shield, Zap, Globe } from "lucide-react";
+
+// Constants
+const AD_SLOT_1 = process.env.NEXT_PUBLIC_AD_SLOT_1 || "";
+const AD_SLOT_2 = process.env.NEXT_PUBLIC_AD_SLOT_2 || "";
 
 export default function Home() {
   // State management
@@ -24,18 +29,20 @@ export default function Home() {
 
   const { toasts, removeToast, success, error, info } = useToast();
 
+  // Memoized quality options
+  const qualityOptions = useMemo(() => {
+    if (!videoInfo) return [];
+    return selectedFormat === "video"
+      ? videoInfo.videoQualities
+      : videoInfo.audioQualities;
+  }, [videoInfo, selectedFormat]);
+
   // Update quality when format or video info changes
   useEffect(() => {
-    if (videoInfo) {
-      const qualities =
-        selectedFormat === "video"
-          ? videoInfo.videoQualities
-          : videoInfo.audioQualities;
-      if (qualities.length > 0) {
-        setSelectedQuality(qualities[0].value);
-      }
+    if (qualityOptions.length > 0) {
+      setSelectedQuality(qualityOptions[0].value);
     }
-  }, [selectedFormat, videoInfo]);
+  }, [qualityOptions]);
 
   // Reset download complete state when changing selections
   useEffect(() => {
@@ -43,7 +50,7 @@ export default function Home() {
   }, [selectedFormat, selectedQuality, videoInfo]);
 
   // Fetch video information
-  const handleFetchInfo = async (url: string) => {
+  const handleFetchInfo = useCallback(async (url: string) => {
     setIsFetching(true);
     setVideoInfo(null);
     setCurrentUrl(url);
@@ -64,25 +71,16 @@ export default function Home() {
 
       setVideoInfo(data.data);
       success("Video information loaded successfully!");
-
-      // Auto-select best quality
-      const qualities =
-        selectedFormat === "video"
-          ? data.data.videoQualities
-          : data.data.audioQualities;
-      if (qualities.length > 0) {
-        setSelectedQuality(qualities[0].value);
-      }
     } catch (err: any) {
       error(err.message || "Failed to fetch video information");
       setVideoInfo(null);
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [success, error]);
 
   // Handle download
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     if (!videoInfo || !selectedQuality) return;
 
     setIsDownloading(true);
@@ -117,14 +115,20 @@ export default function Home() {
       error(err.message || "Download failed. Please try again.");
       setIsDownloading(false);
     }
-  };
+  }, [videoInfo, selectedQuality, currentUrl, selectedFormat, info, success, error]);
 
-  // Get current quality options
-  const qualityOptions = videoInfo
-    ? selectedFormat === "video"
-      ? videoInfo.videoQualities
-      : videoInfo.audioQualities
-    : [];
+  // Memoized format change handler
+  const handleFormatChange = useCallback((format: FormatType) => {
+    setSelectedFormat(format);
+  }, []);
+
+  // Memoized quality change handler
+  const handleQualityChange = useCallback((quality: string) => {
+    setSelectedQuality(quality);
+  }, []);
+
+  // Show features when no video loaded
+  const showFeatures = !videoInfo && !isFetching;
 
   return (
     <>
@@ -157,7 +161,7 @@ export default function Home() {
 
         {/* Ad Banner - Below Input */}
         <div className="mb-8">
-                              <AdBanner adSlot={process.env.NEXT_PUBLIC_AD_SLOT_1 || ""} adFormat="auto" className="rounded-xl overflow-hidden" />
+          <AdBanner adSlot={AD_SLOT_1} adFormat="auto" className="rounded-xl overflow-hidden" />
         </div>
 
         {/* Video Info & Settings */}
@@ -174,14 +178,14 @@ export default function Home() {
 
               <FormatSelector
                 selected={selectedFormat}
-                onChange={setSelectedFormat}
+                onChange={handleFormatChange}
                 disabled={isDownloading}
               />
 
               <QualitySelector
                 options={qualityOptions}
                 selected={selectedQuality}
-                onChange={setSelectedQuality}
+                onChange={handleQualityChange}
                 disabled={isDownloading}
                 formatType={selectedFormat}
               />
@@ -198,7 +202,7 @@ export default function Home() {
         )}
 
         {/* Features Section */}
-        {!videoInfo && !isFetching && (
+        {showFeatures && (
           <div className="mt-16 animate-fade-in">
             <h2 className="text-2xl font-semibold text-white text-center mb-8">
               Why Choose Us?
@@ -229,7 +233,7 @@ export default function Home() {
         )}
 
         {/* Supported Sites */}
-        {!videoInfo && !isFetching && (
+        {showFeatures && (
           <div className="mt-16 text-center animate-fade-in">
             <p className="text-sm text-gray-500 mb-4">Supported platforms</p>
             <div className="flex flex-wrap justify-center gap-6 text-gray-400">
@@ -244,30 +248,10 @@ export default function Home() {
 
         {/* Ad Banner - Bottom */}
         <div className="mt-12">
-                              <AdBanner adSlot={process.env.NEXT_PUBLIC_AD_SLOT_2 || ""} adFormat="auto" className="rounded-xl overflow-hidden" />
+          <AdBanner adSlot={AD_SLOT_2} adFormat="auto" className="rounded-xl overflow-hidden" />
         </div>
       </div>
     </>
   );
 }
 
-// Feature Card Component
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="glass rounded-xl p-5 text-center card-hover">
-      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center text-primary-400">
-        {icon}
-      </div>
-      <h3 className="text-white font-medium mb-1">{title}</h3>
-      <p className="text-gray-400 text-sm">{description}</p>
-    </div>
-  );
-}

@@ -1,34 +1,20 @@
 "use client";
 
+import { memo } from "react";
 import Image from "next/image";
-import { Clock, User, Eye, Calendar } from "lucide-react";
+import { User, Eye, Calendar } from "lucide-react";
 import type { VideoInfo } from "@/app/types/video";
+import { formatViewCount, formatDate } from "@/app/lib/utils";
 
 interface VideoCardProps {
   video: VideoInfo;
 }
 
-function formatViewCount(count?: number): string {
-  if (!count) return "";
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M views`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K views`;
-  }
-  return `${count} views`;
-}
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr || dateStr.length !== 8) return "";
-  const year = dateStr.substring(0, 4);
-  const month = dateStr.substring(4, 6);
-  const day = dateStr.substring(6, 8);
-  const date = new Date(`${year}-${month}-${day}`);
-  return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
-
-export default function VideoCard({ video }: VideoCardProps) {
+/**
+ * Video card component displaying video thumbnail and metadata
+ * Memoized to prevent unnecessary re-renders when parent updates
+ */
+const VideoCard = memo(function VideoCard({ video }: VideoCardProps) {
   return (
     <div className="glass rounded-2xl overflow-hidden card-hover animate-slide-up">
       {/* Thumbnail */}
@@ -38,8 +24,10 @@ export default function VideoCard({ video }: VideoCardProps) {
             src={video.thumbnail}
             alt={video.title}
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
-            unoptimized
+            priority={false}
+            loading="lazy"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -85,4 +73,6 @@ export default function VideoCard({ video }: VideoCardProps) {
       </div>
     </div>
   );
-}
+});
+
+export default VideoCard;
