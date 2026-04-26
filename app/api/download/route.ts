@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Build yt-dlp arguments
-    const args: string[] = [url, "-o", "-"]; // Output to stdout
+    const args: string[] = [url, "-o", "-", "--no-update"]; // Output to stdout
 
     if (format === "audio") {
       args.push(
