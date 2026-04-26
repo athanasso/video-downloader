@@ -1,92 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
 import { sanitizeFilename } from "@/app/lib/utils";
+import { rm } from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
+import { createReadStream, existsSync } from "fs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const url = searchParams.get("url");
+  const id = searchParams.get("id");
   const format = searchParams.get("format") as "video" | "audio";
-  const quality = searchParams.get("quality");
   const title = searchParams.get("title") || "download";
 
-  // Validate parameters
-  if (!url || !format || !quality) {
-    return NextResponse.json(
-      { error: "Missing required parameters: url, format, quality" },
-      { status: 400 }
-    );
+  if (!id || !format) {
+    return NextResponse.json({ error: "Missing id or format" }, { status: 400 });
+  }
+
+  // Validate ID to prevent directory traversal
+  if (!id.startsWith("ytdlp-") || id.includes("/") || id.includes("\\")) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+
+  const tempDir = join(tmpdir(), id);
+  const extension = format === "audio" ? "mp3" : "mp4";
+  const tempFile = join(tempDir, `output.${extension}`);
+
+  if (!existsSync(tempFile)) {
+    return NextResponse.json({ error: "File not found or expired. Please download again." }, { status: 404 });
   }
 
   try {
-    // Build yt-dlp arguments
-    const args: string[] = [url, "-o", "-", "--no-update"]; // Output to stdout
-
-    if (format === "audio") {
-      args.push(
-        "-x", // Extract audio
-        "--audio-format", "mp3",
-        "--audio-quality", quality === "320" ? "0" : quality === "256" ? "1" : quality === "192" ? "2" : "5"
-      );
-    } else {
-      // Video format
-      const height = quality.replace("p", "");
-      args.push(
-        "-f", `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
-        "--merge-output-format", "mp4"
-      );
-    }
-
-    // Spawn yt-dlp process
-    const ytdlp = spawn("yt-dlp", args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    // Collect stderr for error handling
-    let stderrData = "";
-    ytdlp.stderr.on("data", (chunk) => {
-      stderrData += chunk.toString();
-    });
-
-    // Convert Node.js stream to Web ReadableStream
-    const nodeStream = ytdlp.stdout;
     let isCancelled = false;
+    const nodeStream = createReadStream(tempFile);
+
     const webStream = new ReadableStream({
       start(controller) {
         nodeStream.on("data", (chunk) => {
-          if (isCancelled) return;
+          if (isCancelled) {
+            nodeStream.destroy();
+            return;
+          }
           try {
             controller.enqueue(chunk);
           } catch (e) {
             isCancelled = true;
-            ytdlp.kill();
+            nodeStream.destroy();
           }
         });
+
         nodeStream.on("end", () => {
-          if (isCancelled) return;
-          try {
-            controller.close();
-          } catch (e) {}
+          if (!isCancelled) {
+            try { controller.close(); } catch (e) {}
+          }
+          // Cleanup the file once streamed successfully
+          rm(tempDir, { recursive: true, force: true }).catch(() => {});
         });
+
         nodeStream.on("error", (err) => {
-          if (isCancelled) return;
-          try {
-            controller.error(err);
-          } catch (e) {}
+          if (!isCancelled) {
+            try { controller.error(err); } catch (e) {}
+          }
+          rm(tempDir, { recursive: true, force: true }).catch(() => {});
         });
       },
       cancel() {
         isCancelled = true;
-        ytdlp.kill();
+        nodeStream.destroy();
+        rm(tempDir, { recursive: true, force: true }).catch(() => {});
       },
     });
 
-    // Set appropriate headers for download
+    request.signal.addEventListener("abort", () => {
+      isCancelled = true;
+      nodeStream.destroy();
+      rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    });
+
     const filename = sanitizeFilename(title);
     const contentType = format === "audio" ? "audio/mpeg" : "video/mp4";
-    const extension = format === "audio" ? "mp3" : "mp4";
 
     const headers = new Headers({
       "Content-Type": contentType,
@@ -95,23 +88,9 @@ export async function GET(request: NextRequest) {
       "Transfer-Encoding": "chunked",
     });
 
-    // Handle process errors
-    ytdlp.on("error", (error) => {
-      console.error("yt-dlp process error:", error);
-    });
-
-    ytdlp.on("close", (code) => {
-      if (code !== 0) {
-        console.error("yt-dlp exited with code:", code, "stderr:", stderrData);
-      }
-    });
-
     return new NextResponse(webStream, { headers });
   } catch (error: any) {
-    console.error("Download error:", error);
-    return NextResponse.json(
-      { error: error.message || "Download failed" },
-      { status: 500 }
-    );
+    rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    return NextResponse.json({ error: error.message || "Download failed" }, { status: 500 });
   }
 }

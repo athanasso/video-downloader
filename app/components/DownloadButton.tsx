@@ -9,6 +9,7 @@ interface DownloadButtonProps {
   isComplete?: boolean;
   disabled?: boolean;
   format: "video" | "audio";
+  progress?: number;
 }
 
 /**
@@ -21,42 +22,51 @@ const DownloadButton = memo(function DownloadButton({
   isComplete,
   disabled,
   format,
+  progress,
 }: DownloadButtonProps) {
   return (
     <button
       onClick={onClick}
       disabled={disabled || isLoading}
       className={`
-        w-full py-4 px-6 rounded-xl
+        relative w-full py-4 px-6 rounded-xl overflow-hidden
         font-semibold text-base
-        flex items-center justify-center gap-3
         transition-all duration-300
         ${
           isComplete
             ? "bg-green-500 text-white"
             : isLoading
-            ? "bg-gray-600 text-gray-300 cursor-wait"
+            ? "bg-gray-800 text-gray-300 cursor-wait border border-gray-700"
             : "btn-gradient text-white"
         }
         ${disabled && !isLoading ? "opacity-50 cursor-not-allowed" : ""}
       `}
     >
-      {isComplete ? (
-        <>
-          <Check className="w-5 h-5" />
-          <span>Download Complete!</span>
-        </>
-      ) : isLoading ? (
-        <>
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Preparing Download...</span>
-        </>
-      ) : (
-        <>
-          <Download className="w-5 h-5" />
-          <span>Download {format === "video" ? "Video" : "Audio"}</span>
-        </>
+      {isLoading && progress !== undefined && (
+        <div 
+          className="absolute left-0 top-0 bottom-0 bg-primary-500/30 transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
       )}
+      
+      <div className="relative z-10 flex items-center justify-center gap-3">
+        {isComplete ? (
+          <>
+            <Check className="w-5 h-5" />
+            <span>Download Complete!</span>
+          </>
+        ) : isLoading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>{progress !== undefined ? `Downloading... ${progress.toFixed(1)}%` : "Preparing..."}</span>
+          </>
+        ) : (
+          <>
+            <Download className="w-5 h-5" />
+            <span>Download {format === "video" ? "Video" : "Audio"}</span>
+          </>
+        )}
+      </div>
     </button>
   );
 });

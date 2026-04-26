@@ -22,6 +22,7 @@ export default function Home() {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number | undefined>(undefined);
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<FormatType>("video");
   const [selectedQuality, setSelectedQuality] = useState("");
@@ -85,6 +86,7 @@ export default function Home() {
 
     setIsDownloading(true);
     setDownloadComplete(false);
+    setDownloadProgress(0);
 
     try {
       info("Preparing your download...", 3000);
@@ -97,23 +99,56 @@ export default function Home() {
         title: videoInfo.title,
       });
 
-      // Create a hidden link and trigger download
-      const link = document.createElement("a");
-      link.href = `/api/download?${params.toString()}`;
-      link.download = `${videoInfo.title}.${selectedFormat === "video" ? "mp4" : "mp3"}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Connect to Server-Sent Events to track download progress
+      const eventSource = new EventSource(`/api/prepare?${params.toString()}`);
 
-      // Show success after a short delay
-      setTimeout(() => {
-        setDownloadComplete(true);
-        success("Your download has started!");
+      eventSource.addEventListener("progress", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.percent !== undefined) {
+            setDownloadProgress(data.percent);
+          }
+        } catch (err) {}
+      });
+
+      eventSource.addEventListener("complete", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          eventSource.close();
+          setDownloadProgress(100);
+          
+          // Trigger the actual file download using the ready fileId
+          const link = document.createElement("a");
+          link.href = `/api/download?id=${data.id}&format=${selectedFormat}&title=${encodeURIComponent(videoInfo.title)}`;
+          link.download = `${videoInfo.title}.${selectedFormat === "video" ? "mp4" : "mp3"}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          setDownloadComplete(true);
+          success("Your file is ready! Download starting...");
+          setIsDownloading(false);
+          
+          setTimeout(() => setDownloadProgress(undefined), 2000);
+        } catch (err) {}
+      });
+
+      eventSource.addEventListener("error", (e: any) => {
+        eventSource.close();
+        let errMsg = "Download preparation failed. Please try again.";
+        try {
+           const data = JSON.parse(e.data);
+           if (data.message) errMsg = data.message;
+        } catch(err) {}
+        error(errMsg);
         setIsDownloading(false);
-      }, 1500);
+        setDownloadProgress(undefined);
+      });
+
     } catch (err: any) {
       error(err.message || "Download failed. Please try again.");
       setIsDownloading(false);
+      setDownloadProgress(undefined);
     }
   }, [videoInfo, selectedQuality, currentUrl, selectedFormat, info, success, error]);
 
@@ -196,6 +231,7 @@ export default function Home() {
                 isComplete={downloadComplete}
                 disabled={!selectedQuality}
                 format={selectedFormat}
+                progress={downloadProgress}
               />
             </div>
           </div>
