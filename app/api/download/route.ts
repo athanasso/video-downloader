@@ -52,19 +52,33 @@ export async function GET(request: NextRequest) {
 
     // Convert Node.js stream to Web ReadableStream
     const nodeStream = ytdlp.stdout;
+    let isCancelled = false;
     const webStream = new ReadableStream({
       start(controller) {
         nodeStream.on("data", (chunk) => {
-          controller.enqueue(chunk);
+          if (isCancelled) return;
+          try {
+            controller.enqueue(chunk);
+          } catch (e) {
+            isCancelled = true;
+            ytdlp.kill();
+          }
         });
         nodeStream.on("end", () => {
-          controller.close();
+          if (isCancelled) return;
+          try {
+            controller.close();
+          } catch (e) {}
         });
         nodeStream.on("error", (err) => {
-          controller.error(err);
+          if (isCancelled) return;
+          try {
+            controller.error(err);
+          } catch (e) {}
         });
       },
       cancel() {
+        isCancelled = true;
         ytdlp.kill();
       },
     });
