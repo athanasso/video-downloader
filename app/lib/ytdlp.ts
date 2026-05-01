@@ -1,8 +1,21 @@
 import { create } from "youtube-dl-exec";
 import type { VideoInfo, VideoFormat, QualityOption } from "@/app/types/video";
+import { existsSync } from "fs";
+import { join } from "path";
 
 // Create yt-dlp instance - try common paths
 const ytdlp = create("yt-dlp");
+
+// Path to cookies.txt file for YouTube authentication
+const COOKIES_PATH = join(process.cwd(), "cookies.txt");
+
+// Check if cookies.txt exists
+export function getCookiesPath(): string | null {
+  if (existsSync(COOKIES_PATH)) {
+    return COOKIES_PATH;
+  }
+  return null;
+}
 
 // Helper to format duration from seconds
 export function formatDuration(seconds: number): string {
@@ -138,14 +151,22 @@ function parseAudioQualities(formats: VideoFormat[]): QualityOption[] {
 // Fetch video information
 export async function getVideoInfo(url: string): Promise<VideoInfo> {
   try {
-    const info = await ytdlp(url, {
+    const cookiesPath = getCookiesPath();
+    const flags: Record<string, unknown> = {
       dumpSingleJson: true,
       noWarnings: true,
-      callHome: false,
-      preferFreeFormats: true,
       // Skip download, just get info
       skipDownload: true,
-    }) as any;
+      // Required for YouTube's n-challenge (anti-throttling JS challenge solver)
+      remoteComponents: "ejs:github",
+    };
+
+    // Use cookies.txt if available (needed for YouTube bot detection)
+    if (cookiesPath) {
+      flags.cookies = cookiesPath;
+    }
+
+    const info = await ytdlp(url, flags as any) as any;
 
     // Handle both single video and playlist
     const videoData = info.entries ? info.entries[0] : info;
@@ -228,6 +249,17 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
     }
     if (errorMessage.includes("HTTP Error 404")) {
       throw new Error("Video not found. Please check the URL and try again.");
+    }
+    if (errorMessage.includes("Sign in to confirm you")) {
+      const hasCookies = getCookiesPath();
+      if (hasCookies) {
+        throw new Error("YouTube bot detection triggered despite cookies.txt being present. Your cookies may have expired — please re-export them from your browser.");
+      }
+      throw new Error(
+        'YouTube requires authentication. Please export your YouTube cookies to a "cookies.txt" file in the project root. ' +
+        'Install a browser extension like "Get cookies.txt LOCALLY" on Chrome, visit youtube.com while signed in, export cookies, ' +
+        'and save the file as cookies.txt in the project folder.'
+      );
     }
 
     // If we have some error message, use it; otherwise provide a generic message

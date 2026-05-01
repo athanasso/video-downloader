@@ -49,3 +49,6 @@ coverage/
 *.log
 *.tmp
 *.temp
+
+# Auth cookies (contains private YouTube session tokens)
+cookies.txt

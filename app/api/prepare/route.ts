@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { getCookiesPath } from "@/app/lib/ytdlp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,13 @@ export async function GET(request: NextRequest) {
   const extension = format === "audio" ? "mp3" : "mp4";
   const tempFile = join(tempDir, `output.${extension}`);
 
-  const args: string[] = [url, "-o", tempFile, "--no-update", "-N", "8"];
+  const args: string[] = [url, "-o", tempFile, "--no-update", "-N", "8", "--remote-components", "ejs:github"];
+
+  // Use cookies.txt if available (needed for YouTube bot detection)
+  const cookiesPath = getCookiesPath();
+  if (cookiesPath) {
+    args.push("--cookies", cookiesPath);
+  }
 
   if (format === "audio") {
     args.push("-x", "--audio-format", "mp3", "--audio-quality", quality === "320" ? "0" : quality === "256" ? "1" : quality === "192" ? "2" : "5");
