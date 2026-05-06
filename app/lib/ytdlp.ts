@@ -90,6 +90,20 @@ function parseVideoQualities(formats: VideoFormat[]): QualityOption[] {
     };
   });
 
+  // If the highest available resolution is less than 1080p, add an upscaled 1080p option
+  if (availableHeights.length > 0 && availableHeights[0] < 1080) {
+    options.unshift({
+      label: "Full HD (1080p) - Enhanced Upscale (Slower)",
+      value: "1080p_upscaled_enhanced",
+      formatId: "bestvideo+bestaudio/best",
+    });
+    options.unshift({
+      label: "Full HD (1080p) - Fast Upscale",
+      value: "1080p_upscaled_fast",
+      formatId: "bestvideo+bestaudio/best",
+    });
+  }
+
   // If no formats found, provide default options for yt-dlp to handle
   if (options.length === 0) {
     return [

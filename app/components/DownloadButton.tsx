@@ -10,6 +10,7 @@ interface DownloadButtonProps {
   disabled?: boolean;
   format: "video" | "audio";
   progress?: number;
+  progressMessage?: string;
 }
 
 /**
@@ -23,6 +24,7 @@ const DownloadButton = memo(function DownloadButton({
   disabled,
   format,
   progress,
+  progressMessage,
 }: DownloadButtonProps) {
   return (
     <button
@@ -58,7 +60,7 @@ const DownloadButton = memo(function DownloadButton({
         ) : isLoading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span>{progress !== undefined ? `Downloading... ${progress.toFixed(1)}%` : "Preparing..."}</span>
+            <span>{progressMessage ? progressMessage : progress !== undefined ? `Downloading... ${progress.toFixed(1)}%` : "Preparing..."}</span>
           </>
         ) : (
           <>

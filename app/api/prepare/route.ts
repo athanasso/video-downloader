@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
   const url = searchParams.get("url");
   const format = searchParams.get("format") as "video" | "audio";
   const quality = searchParams.get("quality");
+  const force1080p = searchParams.get("force1080p") === "true";
+  const enhance = searchParams.get("enhance") === "true";
 
   if (!url || !format || !quality) {
     return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
   if (format === "audio") {
     args.push("-x", "--audio-format", "mp3", "--audio-quality", quality === "320" ? "0" : quality === "256" ? "1" : quality === "192" ? "2" : "5");
   } else {
-    const height = quality.replace("p", "");
+    const height = force1080p ? "1080" : quality.replace("p", "");
     args.push("-f", `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`, "--merge-output-format", "mp4");
   }
 
@@ -78,9 +80,73 @@ export async function GET(request: NextRequest) {
         stderrData += chunk.toString();
       });
 
-      ytdlp.on("close", (code) => {
+      ytdlp.on("close", async (code) => {
         if (isCancelled) return;
         if (code === 0) {
+          
+          if (force1080p && format === "video") {
+            try {
+              sendEvent("progress", { percent: 100, message: "Upscaling to 1080p (this may take a while)..." });
+              
+              const tempOutFile = join(tempDir, `upscale.mp4`);
+              const vfScale = enhance
+                ? "scale=-2:1080:flags=lanczos,hqdn3d=1.5:1.5:6:6,unsharp=3:3:0.5:3:3:0.0"
+                : "scale=-2:1080:flags=lanczos";
+
+              const ffmpegArgs = [
+                "-y", 
+                "-i", tempFile, 
+                "-map", "0:v:0", 
+                "-map", "0:a?", 
+                "-c:v", "libx264", 
+                "-preset", "faster", 
+                "-crf", "28", 
+                "-threads", "0",
+                "-vf", vfScale, 
+                "-c:a", "copy", 
+                tempOutFile
+              ];
+              
+              const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+              
+              let duration = 0;
+              ffmpeg.stderr.on("data", (chunk) => {
+                const str = chunk.toString();
+                const durMatch = str.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/);
+                if (durMatch) {
+                  duration = parseInt(durMatch[1]) * 3600 + parseInt(durMatch[2]) * 60 + parseFloat(durMatch[3]);
+                }
+                
+                const timeMatch = str.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+                if (timeMatch && duration > 0) {
+                  const time = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseFloat(timeMatch[3]);
+                  const percent = Math.min(99, Math.round((time / duration) * 100));
+                  sendEvent("progress", { percent, message: `Upscaling... ${percent}%` });
+                }
+              });
+
+              await new Promise((resolve, reject) => {
+                let errLog = "";
+                ffmpeg.stderr.on("data", (chunk) => { errLog += chunk.toString(); });
+                ffmpeg.on("close", (ffmpegCode) => {
+                  if (ffmpegCode === 0) resolve(true);
+                  else reject(new Error("FFmpeg failed with code " + ffmpegCode + "\n" + errLog));
+                });
+                ffmpeg.on("error", reject);
+              });
+
+              await rm(tempFile, { force: true });
+              const { rename } = await import("fs/promises");
+              await rename(tempOutFile, tempFile);
+              
+            } catch (err: any) {
+              console.error("Upscale failed:", err);
+              sendEvent("error", { message: `Upscaling failed: ${err.message || "Unknown error"}` });
+              try { controller.close(); } catch (e) {}
+              return; // Stop here so we don't send 'complete'
+            }
+          }
+
           // Extract just the folder name for the ID
           const folderName = tempDir.split(/[\/\\]/).pop();
           sendEvent("complete", { id: folderName });

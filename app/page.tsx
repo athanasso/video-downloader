@@ -23,6 +23,7 @@ export default function Home() {
   const [isFetching, setIsFetching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<number | undefined>(undefined);
+  const [downloadMessage, setDownloadMessage] = useState<string | undefined>(undefined);
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<FormatType>("video");
   const [selectedQuality, setSelectedQuality] = useState("");
@@ -87,17 +88,30 @@ export default function Home() {
     setIsDownloading(true);
     setDownloadComplete(false);
     setDownloadProgress(0);
+    setDownloadMessage(undefined);
 
     try {
       info("Preparing your download...", 3000);
+
+      let baseQuality = selectedQuality;
+      if (selectedQuality.includes("_upscaled")) {
+        baseQuality = selectedQuality.replace("_upscaled_fast", "").replace("_upscaled_enhanced", "");
+      }
 
       // Build download URL
       const params = new URLSearchParams({
         url: currentUrl,
         format: selectedFormat,
-        quality: selectedQuality,
+        quality: baseQuality,
         title: videoInfo.title,
       });
+
+      if (selectedQuality.includes("1080p_upscaled") && selectedFormat === "video") {
+        params.append("force1080p", "true");
+        if (selectedQuality === "1080p_upscaled_enhanced") {
+          params.append("enhance", "true");
+        }
+      }
 
       // Connect to Server-Sent Events to track download progress
       const eventSource = new EventSource(`/api/prepare?${params.toString()}`);
@@ -107,6 +121,11 @@ export default function Home() {
           const data = JSON.parse(e.data);
           if (data.percent !== undefined) {
             setDownloadProgress(data.percent);
+          }
+          if (data.message) {
+            setDownloadMessage(data.message);
+          } else if (data.percent !== undefined) {
+            setDownloadMessage(`Downloading... ${data.percent.toFixed(1)}%`);
           }
         } catch (err) {}
       });
@@ -149,6 +168,7 @@ export default function Home() {
       error(err.message || "Download failed. Please try again.");
       setIsDownloading(false);
       setDownloadProgress(undefined);
+      setDownloadMessage(undefined);
     }
   }, [videoInfo, selectedQuality, currentUrl, selectedFormat, info, success, error]);
 
@@ -232,6 +252,7 @@ export default function Home() {
                 disabled={!selectedQuality}
                 format={selectedFormat}
                 progress={downloadProgress}
+                progressMessage={downloadMessage}
               />
             </div>
           </div>
