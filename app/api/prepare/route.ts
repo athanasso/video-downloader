@@ -25,7 +25,14 @@ export async function GET(request: NextRequest) {
   const extension = format === "audio" ? "mp3" : "mp4";
   const tempFile = join(tempDir, `output.${extension}`);
 
-  const args: string[] = [url, "-o", tempFile, "--no-update", "-N", "8", "--remote-components", "ejs:github"];
+  const args: string[] = [
+    url, 
+    "-o", tempFile, 
+    "--no-update", 
+    "-N", "8", 
+    "--remote-components", "ejs:github",
+    "--extractor-args", "youtube:player_client=ios,android,web_safari"
+  ];
 
   // Use cookies.txt if available (needed for YouTube bot detection)
   const cookiesPath = getCookiesPath();

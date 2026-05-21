@@ -9,11 +9,12 @@ A modern Next.js 14+ application for downloading videos and audio from YouTube a
 ## Features
 
 - 🎬 **Video Downloads** - MP4 format up to 8K resolution
+- 🚀 **Smart Upscaling** - Dynamic "Fast" and "Enhanced (AI-like)" 1080p upscaling for 720p/lower videos
 - 🎵 **Audio Extraction** - MP3 format up to 320kbps
 - 🎨 **Modern UI** - Dark theme with glassmorphism design
 - ⚡ **Fast Streaming** - Direct downloads, no waiting
 - 🌐 **1000+ Sites** - YouTube, Vimeo, Twitter, TikTok, and more
-- 🍪 **Cookie Auth** - Automatic `cookies.txt` support for YouTube bot detection bypass
+- 🛡️ **Bot Bypass** - Native mobile client spoofing (iOS/Android) avoids YouTube blocks without cookies
 
 ## Prerequisites
 
@@ -35,9 +36,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## YouTube Cookie Setup
+## YouTube Bot Detection & Cookies
 
-YouTube requires authentication to bypass bot detection. To set this up:
+This application uses advanced mobile client spoofing (`player_client=ios,android,web_safari`) to automatically bypass YouTube's aggressive "Sign in to confirm you're not a bot" detection. **For the vast majority of public videos, you do not need cookies.**
+
+*Make sure your yt-dlp is always fully updated (`pip install -U yt-dlp`) for this bypass to remain effective.*
+
+### Optional: Cookie Setup (For Age-Restricted/Private Videos)
+
+If you are downloading age-restricted videos or if YouTube aggressively blocks your server IP despite the mobile spoofing, you can provide authentication:
 
 1. Install a cookie export extension (e.g. [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc))
 2. Go to [youtube.com](https://youtube.com) and sign in
@@ -45,8 +52,6 @@ YouTube requires authentication to bypass bot detection. To set this up:
 4. Save the file as `cookies.txt` in the project root
 
 > **Note:** The `cookies.txt` file contains sensitive session data and is excluded from git via `.gitignore`. Never share or commit this file.
-
-For non-YouTube sites, cookies are not required.
 
 ## Project Structure
 
