@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     "--no-update", 
     "-N", "8", 
     "--remote-components", "ejs:github",
-    "--extractor-args", "youtube:player_client=ios,android,web_safari"
+    "--extractor-args", "youtube:player_client=default,ios,android,web_safari"
   ];
 
   // Use cookies.txt if available (needed for YouTube bot detection)

@@ -173,7 +173,7 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
       skipDownload: true,
       // Required for YouTube's n-challenge (anti-throttling JS challenge solver)
       remoteComponents: "ejs:github",
-      extractorArgs: "youtube:player_client=ios,android,web_safari",
+      extractorArgs: "youtube:player_client=default,ios,android,web_safari",
     };
 
     // Use cookies.txt if available (needed for YouTube bot detection)

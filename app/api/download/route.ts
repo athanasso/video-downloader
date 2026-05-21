@@ -81,9 +81,10 @@ export async function GET(request: NextRequest) {
     const filename = sanitizeFilename(title);
     const contentType = format === "audio" ? "audio/mpeg" : "video/mp4";
 
+    const encodedFilename = encodeURIComponent(`${filename}.${extension}`);
     const headers = new Headers({
       "Content-Type": contentType,
-      "Content-Disposition": `attachment; filename="${filename}.${extension}"`,
+      "Content-Disposition": `attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`,
       "Cache-Control": "no-cache",
       "Transfer-Encoding": "chunked",
     });
