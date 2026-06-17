@@ -10,7 +10,8 @@ import ToastContainer from "./components/Toast";
 import AdBanner from "./components/AdBanner";
 import FeatureCard from "./components/FeatureCard";
 import { useToast } from "./hooks/useToast";
-import type { VideoInfo, FormatType, ApiResponse } from "./types/video";
+import type { VideoInfo, FormatType, ApiResponse, PlaylistInfo } from "./types/video";
+import PlaylistView from "./components/PlaylistView";
 import { Sparkles, Shield, Zap, Globe } from "lucide-react";
 
 // Constants
@@ -19,7 +20,7 @@ const AD_SLOT_2 = process.env.NEXT_PUBLIC_AD_SLOT_2 || "";
 
 export default function Home() {
   // State management
-  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | PlaylistInfo | null>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<number | undefined>(undefined);
@@ -33,7 +34,7 @@ export default function Home() {
 
   // Memoized quality options
   const qualityOptions = useMemo(() => {
-    if (!videoInfo) return [];
+    if (!videoInfo || 'isPlaylist' in videoInfo) return [];
     return selectedFormat === "video"
       ? videoInfo.videoQualities
       : videoInfo.audioQualities;
@@ -170,7 +171,81 @@ export default function Home() {
       setDownloadProgress(undefined);
       setDownloadMessage(undefined);
     }
-  }, [videoInfo, selectedQuality, currentUrl, selectedFormat, info, success, error]);
+  const handlePlaylistDownload = useCallback(async (url: string, format: FormatType, quality: string, title: string) => {
+    setIsDownloading(true);
+    setDownloadComplete(false);
+    setDownloadProgress(0);
+    setDownloadMessage(undefined);
+
+    try {
+      info(`Preparing download for ${title}...`, 3000);
+
+      // Build download URL
+      const params = new URLSearchParams({
+        url: url,
+        format: format,
+        quality: quality,
+        title: title,
+      });
+
+      // Connect to Server-Sent Events to track download progress
+      const eventSource = new EventSource(`/api/prepare?${params.toString()}`);
+
+      eventSource.addEventListener("progress", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.percent !== undefined) {
+            setDownloadProgress(data.percent);
+          }
+          if (data.message) {
+            setDownloadMessage(data.message);
+          } else if (data.percent !== undefined) {
+            setDownloadMessage(`Downloading... ${data.percent.toFixed(1)}%`);
+          }
+        } catch (err) {}
+      });
+
+      eventSource.addEventListener("complete", (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          eventSource.close();
+          setDownloadProgress(100);
+          
+          // Trigger the actual file download using the ready fileId
+          const link = document.createElement("a");
+          link.href = `/api/download?id=${data.id}&format=${format}&title=${encodeURIComponent(title)}`;
+          link.download = `${title}.${format === "video" ? "mp4" : "mp3"}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          setDownloadComplete(true);
+          success(`Download starting for ${title}!`);
+          setIsDownloading(false);
+          
+          setTimeout(() => setDownloadProgress(undefined), 2000);
+        } catch (err) {}
+      });
+
+      eventSource.addEventListener("error", (e: any) => {
+        eventSource.close();
+        let errMsg = `Download preparation failed for ${title}.`;
+        try {
+           const data = JSON.parse(e.data);
+           if (data.message) errMsg = data.message;
+        } catch(err) {}
+        error(errMsg);
+        setIsDownloading(false);
+        setDownloadProgress(undefined);
+      });
+
+    } catch (err: any) {
+      error(err.message || `Download failed for ${title}.`);
+      setIsDownloading(false);
+      setDownloadProgress(undefined);
+      setDownloadMessage(undefined);
+    }
+  }, [info, success, error]);
 
   // Memoized format change handler
   const handleFormatChange = useCallback((format: FormatType) => {
@@ -220,7 +295,7 @@ export default function Home() {
         </div>
 
         {/* Video Info & Settings */}
-        {videoInfo && (
+        {videoInfo && !('isPlaylist' in videoInfo) && (
           <div className="grid md:grid-cols-2 gap-6 mb-8 animate-slide-up">
             {/* Video Card */}
             <VideoCard video={videoInfo} />
@@ -256,6 +331,15 @@ export default function Home() {
               />
             </div>
           </div>
+        )}
+
+        {/* Playlist View */}
+        {videoInfo && 'isPlaylist' in videoInfo && (
+          <PlaylistView 
+            playlist={videoInfo} 
+            onDownload={handlePlaylistDownload} 
+            disabled={isDownloading} 
+          />
         )}
 
         {/* Features Section */}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVideoInfo } from "@/app/lib/ytdlp";
-import type { ApiResponse, VideoInfo } from "@/app/types/video";
+import type { ApiResponse, VideoInfo, PlaylistInfo } from "@/app/types/video";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Fetch video information
     const videoInfo = await getVideoInfo(url);
 
-    return NextResponse.json<ApiResponse<VideoInfo>>({
+    return NextResponse.json<ApiResponse<VideoInfo | PlaylistInfo>>({
       success: true,
       data: videoInfo,
     });

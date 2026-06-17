@@ -1,5 +1,5 @@
 import { create } from "youtube-dl-exec";
-import type { VideoInfo, VideoFormat, QualityOption } from "@/app/types/video";
+import type { VideoInfo, VideoFormat, QualityOption, PlaylistInfo, PlaylistEntry } from "@/app/types/video";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -15,6 +15,11 @@ export function getCookiesPath(): string | null {
     return COOKIES_PATH;
   }
   return null;
+}
+
+// Helper to check if URL is a playlist
+export function isPlaylistUrl(url: string): boolean {
+  return url.includes('playlist') || url.includes('&list=') || url.includes('?list=');
 }
 
 // Helper to format duration from seconds
@@ -163,14 +168,17 @@ function parseAudioQualities(formats: VideoFormat[]): QualityOption[] {
 }
 
 // Fetch video information
-export async function getVideoInfo(url: string): Promise<VideoInfo> {
+export async function getVideoInfo(url: string): Promise<VideoInfo | PlaylistInfo> {
   try {
     const cookiesPath = getCookiesPath();
+    const isPlaylist = isPlaylistUrl(url);
     const flags: Record<string, unknown> = {
       dumpSingleJson: true,
       noWarnings: true,
       // Skip download, just get info
       skipDownload: true,
+      // Use flat playlist for speed if it's a playlist
+      ...(isPlaylist ? { flatPlaylist: true } : {}),
       // Required for YouTube's n-challenge (anti-throttling JS challenge solver)
       remoteComponents: "ejs:github",
       extractorArgs: "youtube:player_client=default,ios,android,web_safari",
@@ -183,8 +191,27 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
 
     const info = await ytdlp(url, flags as any) as any;
 
-    // Handle both single video and playlist
-    const videoData = info.entries ? info.entries[0] : info;
+    if (info._type === "playlist" || (info.entries && isPlaylist)) {
+      const entries = (info.entries || []).map((entry: any) => ({
+        id: entry.id || "",
+        title: entry.title || "Untitled",
+        thumbnail: entry.thumbnail || entry.thumbnails?.[0]?.url || "",
+        duration: entry.duration || 0,
+        url: entry.url || entry.webpage_url || `https://www.youtube.com/watch?v=${entry.id}`,
+      }));
+
+      return {
+        isPlaylist: true,
+        id: info.id || "",
+        title: info.title || "Playlist",
+        channel: info.uploader || info.channel || "",
+        thumbnail: info.thumbnails?.[0]?.url || "",
+        itemCount: entries.length,
+        entries: entries,
+      } as PlaylistInfo;
+    }
+
+    const videoData = info;
 
     const formats: VideoFormat[] = (videoData.formats || []).map((f: any) => ({
       format_id: f.format_id,

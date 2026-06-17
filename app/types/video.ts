@@ -30,6 +30,24 @@ export interface VideoInfo {
   audioQualities: QualityOption[];
 }
 
+export interface PlaylistEntry {
+  id: string;
+  title: string;
+  thumbnail: string;
+  duration: number;
+  url: string;
+}
+
+export interface PlaylistInfo {
+  isPlaylist: true;
+  id: string;
+  title: string;
+  channel: string;
+  thumbnail: string;
+  itemCount: number;
+  entries: PlaylistEntry[];
+}
+
 export interface QualityOption {
   label: string;
   value: string;
