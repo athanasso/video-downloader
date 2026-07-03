@@ -10,7 +10,12 @@ import ToastContainer from "./components/Toast";
 import AdBanner from "./components/AdBanner";
 import FeatureCard from "./components/FeatureCard";
 import { useToast } from "./hooks/useToast";
-import type { VideoInfo, FormatType, ApiResponse, PlaylistInfo } from "./types/video";
+import type {
+  VideoInfo,
+  FormatType,
+  ApiResponse,
+  PlaylistInfo,
+} from "./types/video";
 import PlaylistView from "./components/PlaylistView";
 import { Sparkles, Shield, Zap, Globe } from "lucide-react";
 
@@ -20,11 +25,17 @@ const AD_SLOT_2 = process.env.NEXT_PUBLIC_AD_SLOT_2 || "";
 
 export default function Home() {
   // State management
-  const [videoInfo, setVideoInfo] = useState<VideoInfo | PlaylistInfo | null>(null);
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | PlaylistInfo | null>(
+    null,
+  );
   const [isFetching, setIsFetching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<number | undefined>(undefined);
-  const [downloadMessage, setDownloadMessage] = useState<string | undefined>(undefined);
+  const [downloadProgress, setDownloadProgress] = useState<number | undefined>(
+    undefined,
+  );
+  const [downloadMessage, setDownloadMessage] = useState<string | undefined>(
+    undefined,
+  );
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<FormatType>("video");
   const [selectedQuality, setSelectedQuality] = useState("");
@@ -34,7 +45,7 @@ export default function Home() {
 
   // Memoized quality options
   const qualityOptions = useMemo(() => {
-    if (!videoInfo || 'isPlaylist' in videoInfo) return [];
+    if (!videoInfo || "isPlaylist" in videoInfo) return [];
     return selectedFormat === "video"
       ? videoInfo.videoQualities
       : videoInfo.audioQualities;
@@ -53,34 +64,37 @@ export default function Home() {
   }, [selectedFormat, selectedQuality, videoInfo]);
 
   // Fetch video information
-  const handleFetchInfo = useCallback(async (url: string) => {
-    setIsFetching(true);
-    setVideoInfo(null);
-    setCurrentUrl(url);
-    setDownloadComplete(false);
-
-    try {
-      const response = await fetch("/api/info", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-
-      const data: ApiResponse<VideoInfo> = await response.json();
-
-      if (!data.success || !data.data) {
-        throw new Error(data.error || "Failed to fetch video information");
-      }
-
-      setVideoInfo(data.data);
-      success("Video information loaded successfully!");
-    } catch (err: any) {
-      error(err.message || "Failed to fetch video information");
+  const handleFetchInfo = useCallback(
+    async (url: string) => {
+      setIsFetching(true);
       setVideoInfo(null);
-    } finally {
-      setIsFetching(false);
-    }
-  }, [success, error]);
+      setCurrentUrl(url);
+      setDownloadComplete(false);
+
+      try {
+        const response = await fetch("/api/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        const data: ApiResponse<VideoInfo> = await response.json();
+
+        if (!data.success || !data.data) {
+          throw new Error(data.error || "Failed to fetch video information");
+        }
+
+        setVideoInfo(data.data);
+        success("Video information loaded successfully!");
+      } catch (err: any) {
+        error(err.message || "Failed to fetch video information");
+        setVideoInfo(null);
+      } finally {
+        setIsFetching(false);
+      }
+    },
+    [success, error],
+  );
 
   // Handle download
   const handleDownload = useCallback(async () => {
@@ -96,7 +110,9 @@ export default function Home() {
 
       let baseQuality = selectedQuality;
       if (selectedQuality.includes("_upscaled")) {
-        baseQuality = selectedQuality.replace("_upscaled_fast", "").replace("_upscaled_enhanced", "");
+        baseQuality = selectedQuality
+          .replace("_upscaled_fast", "")
+          .replace("_upscaled_enhanced", "");
       }
 
       // Build download URL
@@ -107,7 +123,10 @@ export default function Home() {
         title: videoInfo.title,
       });
 
-      if (selectedQuality.includes("1080p_upscaled") && selectedFormat === "video") {
+      if (
+        selectedQuality.includes("1080p_upscaled") &&
+        selectedFormat === "video"
+      ) {
         params.append("force1080p", "true");
         if (selectedQuality === "1080p_upscaled_enhanced") {
           params.append("enhance", "true");
@@ -136,7 +155,7 @@ export default function Home() {
           const data = JSON.parse(e.data);
           eventSource.close();
           setDownloadProgress(100);
-          
+
           // Trigger the actual file download using the ready fileId
           const link = document.createElement("a");
           link.href = `/api/download?id=${data.id}&format=${selectedFormat}&title=${encodeURIComponent(videoInfo.title)}`;
@@ -148,7 +167,7 @@ export default function Home() {
           setDownloadComplete(true);
           success("Your file is ready! Download starting...");
           setIsDownloading(false);
-          
+
           setTimeout(() => setDownloadProgress(undefined), 2000);
         } catch (err) {}
       });
@@ -157,95 +176,108 @@ export default function Home() {
         eventSource.close();
         let errMsg = "Download preparation failed. Please try again.";
         try {
-           const data = JSON.parse(e.data);
-           if (data.message) errMsg = data.message;
-        } catch(err) {}
+          const data = JSON.parse(e.data);
+          if (data.message) errMsg = data.message;
+        } catch (err) {}
         error(errMsg);
         setIsDownloading(false);
         setDownloadProgress(undefined);
       });
-
     } catch (err: any) {
       error(err.message || "Download failed. Please try again.");
       setIsDownloading(false);
       setDownloadProgress(undefined);
       setDownloadMessage(undefined);
     }
-  const handlePlaylistDownload = useCallback(async (url: string, format: FormatType, quality: string, title: string) => {
-    setIsDownloading(true);
-    setDownloadComplete(false);
-    setDownloadProgress(0);
-    setDownloadMessage(undefined);
+  }, [
+    currentUrl,
+    info,
+    selectedFormat,
+    selectedQuality,
+    videoInfo,
+    success,
+    error,
+  ]);
 
-    try {
-      info(`Preparing download for ${title}...`, 3000);
+  const handlePlaylistDownload = useCallback(
+    async (url: string, format: FormatType, quality: string, title: string) => {
+      setIsDownloading(true);
+      setDownloadComplete(false);
+      setDownloadProgress(0);
+      setDownloadMessage(undefined);
 
-      // Build download URL
-      const params = new URLSearchParams({
-        url: url,
-        format: format,
-        quality: quality,
-        title: title,
-      });
+      try {
+        info(`Preparing download for ${title}...`, 3000);
 
-      // Connect to Server-Sent Events to track download progress
-      const eventSource = new EventSource(`/api/prepare?${params.toString()}`);
+        // Build download URL
+        const params = new URLSearchParams({
+          url: url,
+          format: format,
+          quality: quality,
+          title: title,
+        });
 
-      eventSource.addEventListener("progress", (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.percent !== undefined) {
-            setDownloadProgress(data.percent);
-          }
-          if (data.message) {
-            setDownloadMessage(data.message);
-          } else if (data.percent !== undefined) {
-            setDownloadMessage(`Downloading... ${data.percent.toFixed(1)}%`);
-          }
-        } catch (err) {}
-      });
+        // Connect to Server-Sent Events to track download progress
+        const eventSource = new EventSource(
+          `/api/prepare?${params.toString()}`,
+        );
 
-      eventSource.addEventListener("complete", (e) => {
-        try {
-          const data = JSON.parse(e.data);
+        eventSource.addEventListener("progress", (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.percent !== undefined) {
+              setDownloadProgress(data.percent);
+            }
+            if (data.message) {
+              setDownloadMessage(data.message);
+            } else if (data.percent !== undefined) {
+              setDownloadMessage(`Downloading... ${data.percent.toFixed(1)}%`);
+            }
+          } catch (err) {}
+        });
+
+        eventSource.addEventListener("complete", (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            eventSource.close();
+            setDownloadProgress(100);
+
+            // Trigger the actual file download using the ready fileId
+            const link = document.createElement("a");
+            link.href = `/api/download?id=${data.id}&format=${format}&title=${encodeURIComponent(title)}`;
+            link.download = `${title}.${format === "video" ? "mp4" : "mp3"}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setDownloadComplete(true);
+            success(`Download starting for ${title}!`);
+            setIsDownloading(false);
+
+            setTimeout(() => setDownloadProgress(undefined), 2000);
+          } catch (err) {}
+        });
+
+        eventSource.addEventListener("error", (e: any) => {
           eventSource.close();
-          setDownloadProgress(100);
-          
-          // Trigger the actual file download using the ready fileId
-          const link = document.createElement("a");
-          link.href = `/api/download?id=${data.id}&format=${format}&title=${encodeURIComponent(title)}`;
-          link.download = `${title}.${format === "video" ? "mp4" : "mp3"}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          setDownloadComplete(true);
-          success(`Download starting for ${title}!`);
+          let errMsg = `Download preparation failed for ${title}.`;
+          try {
+            const data = JSON.parse(e.data);
+            if (data.message) errMsg = data.message;
+          } catch (err) {}
+          error(errMsg);
           setIsDownloading(false);
-          
-          setTimeout(() => setDownloadProgress(undefined), 2000);
-        } catch (err) {}
-      });
-
-      eventSource.addEventListener("error", (e: any) => {
-        eventSource.close();
-        let errMsg = `Download preparation failed for ${title}.`;
-        try {
-           const data = JSON.parse(e.data);
-           if (data.message) errMsg = data.message;
-        } catch(err) {}
-        error(errMsg);
+          setDownloadProgress(undefined);
+        });
+      } catch (err: any) {
+        error(err.message || `Download failed for ${title}.`);
         setIsDownloading(false);
         setDownloadProgress(undefined);
-      });
-
-    } catch (err: any) {
-      error(err.message || `Download failed for ${title}.`);
-      setIsDownloading(false);
-      setDownloadProgress(undefined);
-      setDownloadMessage(undefined);
-    }
-  }, [info, success, error]);
+        setDownloadMessage(undefined);
+      }
+    },
+    [info, success, error],
+  );
 
   // Memoized format change handler
   const handleFormatChange = useCallback((format: FormatType) => {
@@ -275,8 +307,8 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Paste any video URL and download in your preferred format and quality.
-            Fast, free, and no registration required.
+            Paste any video URL and download in your preferred format and
+            quality. Fast, free, and no registration required.
           </p>
         </div>
 
@@ -291,11 +323,15 @@ export default function Home() {
 
         {/* Ad Banner - Below Input */}
         <div className="mb-8">
-          <AdBanner adSlot={AD_SLOT_1} adFormat="auto" className="rounded-xl overflow-hidden" />
+          <AdBanner
+            adSlot={AD_SLOT_1}
+            adFormat="auto"
+            className="rounded-xl overflow-hidden"
+          />
         </div>
 
         {/* Video Info & Settings */}
-        {videoInfo && !('isPlaylist' in videoInfo) && (
+        {videoInfo && !("isPlaylist" in videoInfo) && (
           <div className="grid md:grid-cols-2 gap-6 mb-8 animate-slide-up">
             {/* Video Card */}
             <VideoCard video={videoInfo} />
@@ -334,11 +370,11 @@ export default function Home() {
         )}
 
         {/* Playlist View */}
-        {videoInfo && 'isPlaylist' in videoInfo && (
-          <PlaylistView 
-            playlist={videoInfo} 
-            onDownload={handlePlaylistDownload} 
-            disabled={isDownloading} 
+        {videoInfo && "isPlaylist" in videoInfo && (
+          <PlaylistView
+            playlist={videoInfo}
+            onDownload={handlePlaylistDownload}
+            disabled={isDownloading}
           />
         )}
 
@@ -389,10 +425,13 @@ export default function Home() {
 
         {/* Ad Banner - Bottom */}
         <div className="mt-12">
-          <AdBanner adSlot={AD_SLOT_2} adFormat="auto" className="rounded-xl overflow-hidden" />
+          <AdBanner
+            adSlot={AD_SLOT_2}
+            adFormat="auto"
+            className="rounded-xl overflow-hidden"
+          />
         </div>
       </div>
     </>
   );
 }
-
